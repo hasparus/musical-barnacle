@@ -1,0 +1,27 @@
+schema:
+  - https://api.thegraph.com/subgraphs/name/ensdomains/ens
+documents:
+  - "./src/ens/**/*.gql"
+generates:
+  "./src/ens/graphql-types.generated.ts":
+    plugins:
+      - typescript
+  "./src/ens":
+    preset: near-operation-file
+    presetConfig:
+      baseTypesPath: graphql-types.generated.ts
+      extension: .generated.ts
+    plugins:
+      - typescript-operations
+      - typescript-react-query
+    cacheDir: ./.cache/gql-generated
+config:
+  pureMagicComment: true
+  enumsAsTypes: true
+  documentMode: "string"
+  strictScalars: true
+  fetcher: ~/ens/gqlClient#gqlClient
+  scalars:
+    BigInt: string
+    BigDecimal: string
+    Bytes: unknown

@@ -1,0 +1,6 @@
+[ ] Read appsettings.json files from a directory
+[ ] List them in the app
+[ ] Modify them with svelte-jsoneditor
+[ ] Modify them with GUI form
+[ ] Create a git repository in the working directory
+[ ] Show file changes 
