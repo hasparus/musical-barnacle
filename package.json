@@ -1,6 +1,6 @@
 {
   "name": "tata-admin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "scripts": {
     "dev": "kenku -p dev: vite taur",
@@ -68,6 +68,7 @@
     "svelte-jsoneditor": "^0.1.5",
     "svelte-preprocess": "^4.7.2",
     "tailwindcss": "^2.1.4",
+    "ts-debounce": "^3.0.0",
     "ts-essentials": "^7.0.2",
     "ts-node": "^9.1.1",
     "tsconfig-paths": "^3.9.0",

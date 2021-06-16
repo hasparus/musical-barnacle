@@ -50,16 +50,13 @@
     },
     "allowlist": {
       "all": false,
-      "shell": {
-        "execute": false,
-        "open": false
-      },
       "fs": {
-        "listFiles": true,
-        "readBinaryFile": false,
+        "readDir": true,
         "readTextFile": true,
-        "setTitle": false,
         "writeFile": true
+      },
+      "dialog": {
+        "open": true
       }
     },
     "windows": [
