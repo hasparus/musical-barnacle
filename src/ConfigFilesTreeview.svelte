@@ -2,7 +2,8 @@
   import type { fs } from "@tauri-apps/api";
   import { createEventDispatcher } from "svelte";
 
-  import { CONFIG_FILE_REGEX } from "./core";
+  import { findLoneLeafConfigFile } from "./core";
+  import ConfigFilePath from "./ConfigFilePath.svelte";
 
   export let children: fs.FileEntry["children"];
   export let name: fs.FileEntry["name"] = undefined;
@@ -14,15 +15,7 @@
     expanded = !expanded;
   };
 
-  $: onlyChildFile =
-    (children &&
-      children.length === 1 &&
-      !children[0]?.children &&
-      children[0]!.name!.match(CONFIG_FILE_REGEX) &&
-      children[0]) ||
-    null;
-
-  console.log(">>>", $$props);
+  $: loneLeaf = children && findLoneLeafConfigFile(children);
 
   const onConfigFileClick = (file: fs.FileEntry) => {
     dispatch("click", file);
@@ -30,10 +23,10 @@
 
 </script>
 
-{#if name && onlyChildFile}
+{#if name && loneLeaf}
   <li>
-    <button on:click={() => onlyChildFile && onConfigFileClick(onlyChildFile)}
-      >📜 {name}<span class="text-gray-400">/{onlyChildFile.name}</span></button
+    <button on:click={() => loneLeaf && onConfigFileClick(loneLeaf)}
+      >📜 <ConfigFilePath path={loneLeaf.path} /></button
     >
   </li>
 {:else if expanded}
@@ -42,21 +35,23 @@
   {/if}
   <ul>
     {#each children || [] as file}
-      <li>
-        {#if file.children}
-          <svelte:self
-            name={file.name}
-            children={file.children}
-            on:click={(event) => onConfigFileClick(event.detail)}
-          />
-        {:else}
-          📜 {file.name}
-        {/if}
-      </li>
+      {#if file.name}
+        <li>
+          {#if file.children}
+            <svelte:self
+              name={file.name}
+              children={file.children}
+              on:click={(event) => onConfigFileClick(event.detail)}
+            />
+          {:else}
+            📜 <ConfigFilePath path={file.name || "UNNAMED_FILE"} />
+          {/if}
+        </li>
+      {/if}
     {/each}
   </ul>
 {:else if name}
-  <button class=" cursor-pointer font-semibold" on:click={toggle}
+  <button class="cursor-pointer font-semibold" on:click={toggle}
     >📁 {name}</button
   >
 {/if}

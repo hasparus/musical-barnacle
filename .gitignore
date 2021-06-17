@@ -9,3 +9,4 @@ dist-ssr
 
 **/*.generated.*
 
+yarn-error.log

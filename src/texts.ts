@@ -1,0 +1,16 @@
+export const texts = {
+  Index: "Indeks",
+  Editor: "Edytor",
+  ConfigFiles: "Pliki konfiguracyjne",
+  ConnectionString: "Connection String",
+  ApplicationUrl: "URL Aplikacji",
+  ApplicationName: "Nazwa Aplikacji (ścieżka w IIS)",
+  ModulesPortStartIndex: "Najniższy Port",
+  ModulesPortEndIndex: "Najwyzszy Port",
+  DiagnosticMode: "Tryb Diagnostyczny",
+  WorkingDirectory: "Katalog roboczy",
+  GoBack: "Powrót",
+  IpFilteringOption: "Filtrowanie IP",
+  AllowedAddresses: "Dozwolone Adresy",
+  BlockedAddresses: "Blokowane Adresy",
+};
