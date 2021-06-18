@@ -18,10 +18,10 @@ fn write_app_state(state: yaml::Value) -> InvocationResult<String> {
   
   match serialized {
     Ok(s) => {
-      println!("{}", s);
-
+      
       match fs::write(APPDATA_FILE, s) {
         Ok(_) => {
+          println!("Saved state to {}.", APPDATA_FILE);
           Ok("file written".to_string())
         }   
         Err(err) => {

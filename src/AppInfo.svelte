@@ -1,6 +1,10 @@
 <script lang="ts">
   import { app } from "@tauri-apps/api";
 
+  import { appStore } from "./core";
+
+  $: status = $appStore.status;
+
   async function getAppInfo() {
     const name = app.getName();
     const version = app.getVersion();
@@ -25,4 +29,15 @@
     <span>Nie udało się przeczytać danych aplikacji..</span>
     <pre>{error}</pre>
   {/await}
+  <div class="inline-block ml-3">
+    {#if status === "idle"}
+      {""}
+    {:else if status === "initialising"}
+      Inicjalizacja...
+    {:else if status === "gathering-missing-files"}
+      Wykrywanie zagubionych plików...
+    {:else if status === "reading-configs-contents"}
+      Zczytywanie plików konfiguracyjnych...
+    {/if}
+  </div>
 </div>

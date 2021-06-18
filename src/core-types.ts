@@ -60,6 +60,10 @@ export interface ConfigFile extends ConfigFile.IpFilteringOption {
   ApplicationUrl: string;
   ApplicationName: string;
   HostAsStandalone: false;
+  ModulesPortEndIndex?: string;
+  ModulesPortStartIndex?: string;
+  ProxyIPs: string;
+  ProxyWindowsEnable: boolean;
 }
 
 export type AbsolutePath = string;

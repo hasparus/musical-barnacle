@@ -1,9 +1,14 @@
 import { fs, tauri } from "@tauri-apps/api";
-import { head } from "lodash";
+import json5 from "json5";
 import { writable } from "svelte/store";
 import { assert } from "ts-essentials";
 
-import type { AppEvent, ApplicationState, FileEntry } from "./core-types";
+import type {
+  AppEvent,
+  ApplicationState,
+  ConfigFile,
+  FileEntry,
+} from "./core-types";
 import { isDefined } from "./well-known-utils";
 
 export const appStore = (() => {
@@ -50,50 +55,74 @@ export const appStore = (() => {
         if (appState.workingDirectory) {
           const { files: oldFiles, path } = appState.workingDirectory;
 
-          void readWorkingDirectory(path).then(({ files: newFiles }) => {
-            const getConfigFilePath = (f: FileEntry) =>
-              isConfigFile(f) ? f.path : null;
+          void readWorkingDirectory(path)
+            .then(({ files: newFiles }) => {
+              const getConfigFilePath = (f: FileEntry) =>
+                isConfigFile(f) ? f.path : null;
 
-            const oldPaths = mapFileTreeToArray(
-              oldFiles,
-              getConfigFilePath
-            ).filter(isDefined);
-            const newPaths = mapFileTreeToArray(
-              newFiles,
-              getConfigFilePath
-            ).filter(isDefined);
+              const oldPaths = mapFileTreeToArray(
+                oldFiles,
+                getConfigFilePath
+              ).filter(isDefined);
+              const newPaths = mapFileTreeToArray(
+                newFiles,
+                getConfigFilePath
+              ).filter(isDefined);
 
-            const oldPathsSet = new Set(oldPaths);
-            const newPathsSet = new Set(newPaths);
+              const oldPathsSet = new Set(oldPaths);
+              const newPathsSet = new Set(newPaths);
 
-            const missingPaths = oldPaths.filter((p) => !newPathsSet.has(p));
-            const addedPaths = newPaths.filter((p) => !oldPathsSet.has(p));
+              const missingPaths = oldPaths.filter((p) => !newPathsSet.has(p));
+              const addedPaths = newPaths.filter((p) => !oldPathsSet.has(p));
 
-            const date = new Date();
-            update((s) => {
-              return {
-                ...s,
-                status: "idle", // "reading-configs-contents",
-                events: [
-                  ...s.events,
-                  ...missingPaths.map(
-                    (path): AppEvent => ({
-                      type: "file-missing",
-                      date,
-                      path,
-                    })
-                  ),
-                  ...addedPaths.map(
-                    (path): AppEvent => ({
-                      type: "new-file-added",
-                      date,
-                      path,
-                    })
-                  ),
-                ],
-              };
+              const date = new Date();
+              update((s) => {
+                return {
+                  ...s,
+                  status: "reading-configs-contents",
+                  events: [
+                    ...s.events,
+                    ...missingPaths.map(
+                      (path): AppEvent => ({
+                        type: "file-missing",
+                        date,
+                        path,
+                      })
+                    ),
+                    ...addedPaths.map(
+                      (path): AppEvent => ({
+                        type: "new-file-added",
+                        date,
+                        path,
+                      })
+                    ),
+                  ],
+                };
+              });
+            })
+            .then(() => {
+              update((s) => {
+                console.log("reading config files");
+                void readConfigFiles(s)
+                  .then(({ configFileContents, events }) => {
+                    update((s) => ({
+                      ...s,
+                      events: [...s.events, ...events],
+                      configFileContents: {
+                        ...s.configFileContents,
+                        ...configFileContents,
+                      },
+                    }));
+                  })
+                  .catch((err) => {
+                    update((s) =>
+                      pushError(s, "Failed to read config files", err)
+                    );
+                  });
+
+                return s;
+              });
             });
-          });
         }
       } catch (err: unknown) {
         update((s) => pushError(s, "Failed to read app state from file", err));
@@ -189,14 +218,14 @@ export function normalizePath(path: string) {
   return path.replace(/\\/g, "/");
 }
 
-interface ConfigFile extends FileEntry {
+interface ConfigFileEntry extends FileEntry {
   /**
    * appsettings.json
    */
   name: string;
 }
 
-function isConfigFile(file: FileEntry): file is ConfigFile {
+function isConfigFile(file: FileEntry): file is ConfigFileEntry {
   return !!file.name?.match(CONFIG_FILE_REGEX);
 }
 
@@ -275,9 +304,17 @@ function mapFileTreeToArray<T>(
   });
 }
 
+function getConfigFilesFromTree(files: FileEntry[]) {
+  return mapFileTreeToArray(files, (f) => {
+    if (isConfigFile(f)) {
+      return f;
+    }
+  }).filter(isDefined);
+}
+
 export async function readConfigFiles(
   state: ApplicationState
-): Promise<ApplicationState> {
+): Promise<Pick<ApplicationState, "events" | "configFileContents">> {
   assert(
     state.workingDirectory,
     "workDir must be set when reading config files"
@@ -285,17 +322,53 @@ export async function readConfigFiles(
 
   const { files, path: workDirPath } = state.workingDirectory;
 
-  // TODO
-  await Promise.all(
-    files.map(async (file) => {
+  const configFiles = getConfigFilesFromTree(files);
+
+  const results = await Promise.allSettled(
+    configFiles.map(async (file) => {
       const absolutePath = workDirPath + file.path;
 
-      return await fs.readTextFile(absolutePath);
+      console.info("reading file", { absolutePath });
+
+      let text: string;
+      try {
+        text = await fs.readTextFile(absolutePath);
+      } catch (err) {
+        throw new Error(`Failed to read ${file.path}: ${err as string}`);
+      }
+
+      const parsed = json5.parse<ConfigFile>(text);
+
+      console.info("file read", parsed);
+
+      return parsed;
     })
   );
 
+  const date = new Date();
+  const events: AppEvent[] = [];
+  const configFileContents: ApplicationState["configFileContents"] = {};
+
+  for (const result of results) {
+    switch (result.status) {
+      case "fulfilled":
+        break;
+      case "rejected":
+        events.push({
+          type: "error",
+          date,
+          message:
+            result.reason instanceof Error
+              ? result.reason.message
+              : JSON.stringify(result.reason),
+        });
+        break;
+    }
+  }
+
   return {
-    ...state,
+    events,
+    configFileContents,
   };
 }
 
