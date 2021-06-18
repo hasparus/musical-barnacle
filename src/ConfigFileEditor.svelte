@@ -1,12 +1,18 @@
 <script lang="ts">
-  import Input from "./Input.svelte";
-  import IpFilteringOptionSelect from "./IpFilteringOptionSelect.svelte";
+  import Input from './Input.svelte';
+  import IpFilteringOptionSelect from './IpFilteringOptionSelect.svelte';
 
-  import { texts } from "./texts";
+  import { texts } from './texts';
 
 </script>
 
-<form on:submit={(event) => console.log("submit!", event)} class="space-y-2">
+<form
+  on:submit={(event) => {
+    event.preventDefault();
+    console.log('submit!', event);
+  }}
+  class="space-y-2"
+>
   <Input label={texts.ConnectionString} name="ConnectionString" />
   <Input label={texts.ApplicationUrl} name="ApplicationUrl" />
   <Input
@@ -32,4 +38,16 @@
   </div>
   <Input label={texts.DiagnosticMode} name="DiagnosticMode" />
   <IpFilteringOptionSelect />
+  <Input
+    label={texts.SetOfIpAddresses}
+    name="SetOfIpAddresses"
+    placeholder="127.0.0.2;10.1.2.3-10.5.1.3"
+  />
+  <Input label={texts.ProxyWindowsEnable} name="ProxyWindowsEnable" />
+  <Input
+    label={texts.ProxyIPs}
+    name="ProxyIPs"
+    placeholder="127.0.0.2;10.1.2.3-10.5.1.3"
+  />
+  <button type="submit">{texts.Save}</button>
 </form>
