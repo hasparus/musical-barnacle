@@ -4,14 +4,20 @@
   import ConfigFileEditor from "./ConfigFileEditor.svelte";
   import AppConfiguration from "./AppConfiguration.svelte";
   import { appStore } from "./core";
-  import { navigate, route } from "./Route.svelte";
+  import { navigate, route } from "./router";
   import Link from "./Link.svelte";
+  import AppEventsLog from "./AppEventsLog.svelte";
 
   import { texts } from "./texts";
+  import { onMount } from "svelte";
+
+  onMount(() => {
+    void appStore.init();
+  });
 
 </script>
 
-<main class="p-10 space-y-3">
+<main class="p-10 space-y-3 min-h-screen flex flex-col max-w-3xl">
   {#if $route.path === "/"}
     <header class="max-w-md space-y-1">
       <AppConfiguration />
@@ -28,12 +34,14 @@
         navigate({ path: "/editor", editedConfigFile: event.detail.path });
       }}
     />
+    <AppEventsLog />
   {:else if $route.path === "/editor"}
     <Link to="/" class="text-sm p-2 -m-2">← {texts.GoBack}</Link>
     <ConfigFileEditor />
   {/if}
 
-  <footer class="text-xs absolute bottom-0 p-4">
+  <div class="flex-1" />
+  <footer class="text-xs p-4">
     <AppInfo />
   </footer>
 </main>

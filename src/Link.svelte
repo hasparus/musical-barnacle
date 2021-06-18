@@ -1,13 +1,6 @@
-<script type="ts">
-  import { navigate } from "./Route.svelte";
-  import type { Route } from "./Route.svelte";
-
-  // filter out all routes that have extra keys besides "path"
-  type PathOnly<T extends Route> = {
-    [P in T["path"]]: keyof Extract<T, { path: P }> extends "path"
-      ? Extract<T, { path: P }>
-      : never;
-  }[T["path"]];
+<script lang="ts">
+  import { navigate } from "./router";
+  import type { Route, PathOnly } from "./router";
 
   export let to: Route | PathOnly<Route>["path"];
 

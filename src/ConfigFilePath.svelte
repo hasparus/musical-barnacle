@@ -9,8 +9,6 @@
     .split("/")
     .filter((s) => s.length);
 
-  console.log({ path, rootPath, segments });
-
   let directoryPath = segments.slice(0, -2).join("/");
   if (directoryPath) directoryPath += "/";
 

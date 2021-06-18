@@ -13,4 +13,9 @@ export const texts = {
   IpFilteringOption: "Filtrowanie IP",
   AllowedAddresses: "Dozwolone Adresy",
   BlockedAddresses: "Blokowane Adresy",
+  Events: "Zdarzenia",
+  ErrorOccurred: "Wystąpił Błąd",
+  FileMissing: "Plik zagubiony",
+  NewFileAdded: "Znaleziono nowy plik",
+  PleaseEnterWorkingDirectory: "Ścieżka do katalogu roboczego jest pusta",
 };

@@ -1,42 +1,141 @@
-import { fs } from "@tauri-apps/api";
-import { debounce } from "lodash";
+import { fs, tauri } from "@tauri-apps/api";
+import { head } from "lodash";
 import { writable } from "svelte/store";
 import { assert } from "ts-essentials";
 
-import type { ApplicationState, FileEntry } from "./core-types";
+import type { AppEvent, ApplicationState, FileEntry } from "./core-types";
 import { isDefined } from "./well-known-utils";
 
 export const appStore = (() => {
-  const { subscribe, update } = writable<ApplicationState>({
+  const { subscribe, update, set } = writable<ApplicationState>({
+    status: "initialising",
     configFileContents: {},
-    notifications: [],
+    events: [],
   });
+
+  if (import.meta.env.DEV) {
+    subscribe((state) => {
+      Object.assign(window, { __state: state });
+    });
+  }
+
+  const pushError = <T extends Pick<ApplicationState, "events">>(
+    s: T,
+    message: string,
+    ...meta: unknown[]
+  ) => {
+    console.error(message, ...meta);
+    s.events.push({
+      type: "error",
+      date: new Date(),
+      message: `${message}. ${meta.map((x) => JSON.stringify(x)).join("\n")}`,
+    });
+    return s;
+  };
 
   return {
     subscribe,
+    init: async () => {
+      try {
+        const appState = await readAppState();
+
+        appState.status = "gathering-missing-files";
+        set(appState);
+
+        // gather added files and missing files
+        if (appState.workingDirectory) {
+          const { files: oldFiles, path } = appState.workingDirectory;
+
+          void readWorkingDirectory(path).then(({ files: newFiles }) => {
+            console.log("read working directory", newFiles);
+
+            const getConfigFilePath = (f: FileEntry) =>
+              isConfigFile(f) ? f.path : null;
+
+            const oldPaths = mapFileTreeToArray(
+              oldFiles,
+              getConfigFilePath
+            ).filter(isDefined);
+            const newPaths = mapFileTreeToArray(
+              newFiles,
+              getConfigFilePath
+            ).filter(isDefined);
+
+            const oldPathsSet = new Set(oldPaths);
+            const newPathsSet = new Set(newPaths);
+
+            const missingPaths = oldPaths.filter((p) => !newPathsSet.has(p));
+            const addedPaths = newPaths.filter((p) => !oldPathsSet.has(p));
+
+            const date = new Date();
+            update((s) => {
+              return {
+                ...s,
+                status: "idle", // "reading-configs-contents",
+                events: [
+                  ...s.events,
+                  ...missingPaths.map(
+                    (path): AppEvent => ({
+                      type: "file-missing",
+                      date,
+                      path,
+                    })
+                  ),
+                  ...addedPaths.map(
+                    (path): AppEvent => ({
+                      type: "new-file-added",
+                      date,
+                      path,
+                    })
+                  ),
+                ],
+              };
+            });
+          });
+        }
+      } catch (err: unknown) {
+        update((s) => pushError(s, "Failed to read app state from file", err));
+      }
+    },
     setWorkingDir: ({ files, path }: WorkingDirectory) => {
+      if (!path.trim()) {
+        return;
+      }
+
       update((s) => {
         s.workingDirectory = {
           path: normalizePath(path),
           files,
         };
 
+        void writeAppState(s);
+
         return s;
       });
+
+      // read new file contents
+
+      // compare old files and new
     },
   };
 })();
 
 export const CONFIG_FILE_REGEX = /appsettings.json/i;
 
-function preprocessFiles(entries: FileEntry[]): FileEntry[] {
+function preprocessFiles(entries: FileEntry[], rootPath: string): FileEntry[] {
+  console.log({ rootPath });
+
   return entries
     .map((entry) => {
       if (entry.children) {
+        if (entry.children.length === 0) {
+          return null;
+        }
+
         return {
           ...entry,
-          path: normalizePath(entry.path),
-          children: preprocessFiles(entry.children),
+          path: normalizePath(entry.path).replace(rootPath, ""),
+          children: preprocessFiles(entry.children, rootPath),
         };
       }
 
@@ -44,7 +143,7 @@ function preprocessFiles(entries: FileEntry[]): FileEntry[] {
       return entry.name?.match(CONFIG_FILE_REGEX)
         ? {
             ...entry,
-            path: normalizePath(entry.path),
+            path: normalizePath(entry.path).replace(rootPath, ""),
           }
         : null;
     })
@@ -53,23 +152,30 @@ function preprocessFiles(entries: FileEntry[]): FileEntry[] {
 
 type WorkingDirectory = NonNullable<ApplicationState["workingDirectory"]>;
 
-export const readWorkingDirectory = debounce(
-  (dir: string) => {
-    return fs
-      .readDir(dir, { recursive: true })
-      .then((entries): WorkingDirectory => {
-        return {
-          path: dir,
-          files: preprocessFiles(entries),
-        };
-      });
-  },
-  300,
-  { leading: true }
-);
+export function readWorkingDirectory(dir: string) {
+  return fs
+    .readDir(dir, { recursive: true })
+    .then((entries): WorkingDirectory => {
+      return {
+        path: dir,
+        files: preprocessFiles(entries, dir),
+      };
+    });
+}
 
 export function normalizePath(path: string) {
   return path.replace(/\\/g, "/");
+}
+
+interface ConfigFile extends FileEntry {
+  /**
+   * appsettings.json
+   */
+  name: string;
+}
+
+function isConfigFile(file: FileEntry): file is ConfigFile {
+  return !!file.name?.match(CONFIG_FILE_REGEX);
 }
 
 /**
@@ -91,4 +197,82 @@ export function findLoneLeafConfigFile(files: FileEntry[]): FileEntry | null {
   return null;
 }
 
-export function saveConfigFile() {}
+async function invokeCommand(
+  ...args: Parameters<typeof tauri.invoke>
+): Promise<unknown> {
+  try {
+    return await tauri.invoke(...args);
+  } catch (errorMessage: unknown) {
+    throw new Error(`Command Invocation Failed: ${errorMessage as string}`);
+  }
+}
+
+export async function readAppState(): Promise<ApplicationState> {
+  return (await invokeCommand("read_app_state")) as ApplicationState;
+}
+
+export async function writeAppState(state: ApplicationState) {
+  delete state.status;
+
+  const res = await invokeCommand("write_app_state", { state });
+
+  if (res !== "file written") {
+    throw new Error(
+      `Command Invocation Failed: Unexpected result from [write_app_state] invocation. | ${JSON.stringify(
+        res
+      )}`
+    );
+  }
+}
+
+function reduceFileTree<TAccum>(
+  files: FileEntry[],
+  initialAcc: TAccum,
+  f: (accumulator: TAccum, value: FileEntry) => TAccum
+) {
+  let acc: TAccum = initialAcc;
+
+  for (const file of files) {
+    acc = f(acc, file);
+    const { children } = file;
+    if (children && children.length) {
+      acc = reduceFileTree(children, acc, f);
+    }
+  }
+
+  return acc;
+}
+
+function mapFileTreeToArray<T>(
+  files: FileEntry[],
+  f: (file: FileEntry) => T
+): T[] {
+  return reduceFileTree<T[]>(files, [], (acc, val) => {
+    acc.push(f(val));
+    return acc;
+  });
+}
+
+export async function readConfigFiles(
+  state: ApplicationState
+): Promise<ApplicationState> {
+  assert(
+    state.workingDirectory,
+    "workDir must be set when reading config files"
+  );
+
+  const { files, path: workDirPath } = state.workingDirectory;
+
+  // TODO
+  await Promise.all(
+    files.map(async (file) => {
+      const absolutePath = workDirPath + file.path;
+
+      return await fs.readTextFile(absolutePath);
+    })
+  );
+
+  return {
+    ...state,
+  };
+}

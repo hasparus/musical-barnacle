@@ -1,0 +1,29 @@
+---
+configFileContents: {}
+events: []
+workingDirectory:
+  files:
+    - children:
+        - name: appsettings.json
+          path: /mMDAB/appsettings.json
+      name: mMDAB
+      path: /mMDAB
+    - children:
+        - name: appsettings.json
+          path: /mMWS/appsettings.json
+      name: mMWS
+      path: /mMWS
+    - children:
+        - children:
+            - name: appsettings.json
+              path: /nested-dir/nested-dir/appsettings.json
+          name: nested-dir
+          path: /nested-dir/nested-dir
+      name: nested-dir
+      path: /nested-dir
+    - children:
+        - name: appsettings.json
+          path: /Portal eRejestracja/appsettings.json
+      name: Portal eRejestracja
+      path: /Portal eRejestracja
+  path: "D:/workspace/tata-admin/test/examples/example-directory-1"

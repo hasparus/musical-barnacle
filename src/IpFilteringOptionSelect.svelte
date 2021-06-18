@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import Input from "./Input.svelte";
   import LabelSpan from "./LabelSpan.svelte";
 

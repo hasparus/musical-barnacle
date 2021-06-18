@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import Input from "./Input.svelte";
   import IpFilteringOptionSelect from "./IpFilteringOptionSelect.svelte";
 

@@ -2,6 +2,12 @@
 import type { fs } from "@tauri-apps/api";
 
 export interface ApplicationState {
+  status?:
+    | "initialising"
+    | "gathering-missing-files"
+    | "reading-configs-contents"
+    | "idle";
+
   workingDirectory?: {
     path: string;
     files: FileEntry[];
@@ -10,16 +16,19 @@ export interface ApplicationState {
   /**
    * messages for the user to handle
    */
-  notifications: Notification[];
+  events: AppEvent[];
 }
 
-type Notification =
-  | {
-      type: "working-directory-diverged-from-app-state";
-    }
-  | {
-      type: "please-enter-working-directory";
-    };
+type EventOf<TType extends string, TPayload extends object = {}> = {
+  type: TType;
+  date: Date | string;
+} & TPayload;
+
+export type AppEvent =
+  | EventOf<"please-enter-working-directory">
+  | EventOf<"error", { message: string }>
+  | EventOf<"file-missing", { path: string }>
+  | EventOf<"new-file-added", { path: string }>;
 
 export namespace ConfigFile {
   export namespace IpFilteringOption {
