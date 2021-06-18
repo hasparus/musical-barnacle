@@ -47,8 +47,6 @@ export const appStore = (() => {
           const { files: oldFiles, path } = appState.workingDirectory;
 
           void readWorkingDirectory(path).then(({ files: newFiles }) => {
-            console.log("read working directory", newFiles);
-
             const getConfigFilePath = (f: FileEntry) =>
               isConfigFile(f) ? f.path : null;
 
@@ -116,6 +114,8 @@ export const appStore = (() => {
       // read new file contents
 
       // compare old files and new
+
+      // push "file-changed" events
     },
   };
 })();
@@ -123,8 +123,6 @@ export const appStore = (() => {
 export const CONFIG_FILE_REGEX = /appsettings.json/i;
 
 function preprocessFiles(entries: FileEntry[], rootPath: string): FileEntry[] {
-  console.log({ rootPath });
-
   return entries
     .map((entry) => {
       if (entry.children) {
@@ -275,4 +273,62 @@ export async function readConfigFiles(
   return {
     ...state,
   };
+}
+
+/**
+ * Generates a tree (a line) of FileEntries from `path` relative to `rootPath`.
+ */
+function fileEntryFromPath(path: string): FileEntry {
+  assert(
+    path.endsWith(".json"),
+    "we assume fileEntryFromPath is only called on configuration files"
+  );
+
+  const segments = path.split("/");
+  let name = segments.pop();
+
+  let current: FileEntry = {
+    name,
+    path,
+  };
+
+  while (name) {
+    name = segments.pop();
+    if (name) {
+      current = {
+        path: `${segments.join("/")}/${name}`,
+        name,
+        children: [current],
+      };
+    }
+  }
+
+  return current;
+}
+
+fileEntryFromPath("/nested-dir/nested-dir/appsettings.json"); //?
+
+function mergeFileEntries(xs: FileEntry[], ys: FileEntry[]) {
+  const res = [...xs];
+  const xsPaths = reduceFileTree<Set<string>>(res, new Set(), (set, { path }) =>
+    set.add(path)
+  );
+
+  for (const entry of ys) {
+    const { path, children, name } = entry;
+    if (xsPaths.has(path)) {
+      if (children && children.length) {
+        const index = res.findIndex((x) => x.path === path);
+        res[index] = {
+          name,
+          path,
+          children: mergeFileEntries(children, res[index]?.children || []),
+        };
+      }
+    } else {
+      res.push(entry);
+    }
+  }
+
+  return res;
 }
