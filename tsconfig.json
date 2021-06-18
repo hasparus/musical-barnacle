@@ -34,5 +34,6 @@
     "./test",
     "vite.config.ts",
     "svelte.config.cjs"
-  ]
+  ],
+  "exclude": ["node_modules"]
 }
