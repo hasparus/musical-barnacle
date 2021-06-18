@@ -44,7 +44,11 @@ fn default_app_state() -> yaml::Mapping {
   let mut map = Mapping::new();
   map.insert(Value::String("events".to_string()), Value::Sequence(vec![]));
   map.insert(Value::String("configFileContents".to_string()), Value::Mapping(Mapping::new()));
-  
+
+  let mut ui_state = Mapping::new();
+  ui_state.insert(Value::String("settingsOpen".to_string()), Value::Bool(true));
+  map.insert(Value::String("uiState".to_string()), Value::Mapping(ui_state));
+
   map
 }
 

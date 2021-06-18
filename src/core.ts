@@ -11,6 +11,9 @@ export const appStore = (() => {
     status: "initialising",
     configFileContents: {},
     events: [],
+    uiState: {
+      settingsOpen: true,
+    },
   });
 
   if (import.meta.env.DEV) {
@@ -34,6 +37,7 @@ export const appStore = (() => {
   };
 
   return {
+    set,
     subscribe,
     init: async () => {
       try {
@@ -116,6 +120,26 @@ export const appStore = (() => {
       // compare old files and new
 
       // push "file-changed" events
+    },
+    addFileFromPath: (path: string) => {
+      update((s) => {
+        const { workingDirectory } = s;
+
+        assert(
+          workingDirectory,
+          "cannot call addFile() when working directory is not present"
+        );
+        workingDirectory.files = mergeFileEntries(workingDirectory.files, [
+          fileEntryFromPath(path),
+        ]);
+
+        s.events = s.events.filter(
+          (x) => !(x.type === "new-file-added" && x.path === path)
+        );
+
+        void writeAppState(s);
+        return s;
+      });
     },
   };
 })();
@@ -305,8 +329,6 @@ function fileEntryFromPath(path: string): FileEntry {
 
   return current;
 }
-
-fileEntryFromPath("/nested-dir/nested-dir/appsettings.json"); //?
 
 function mergeFileEntries(xs: FileEntry[], ys: FileEntry[]) {
   const res = [...xs];

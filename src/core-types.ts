@@ -17,6 +17,9 @@ export interface ApplicationState {
    * messages for the user to handle
    */
   events: AppEvent[];
+  uiState: {
+    settingsOpen: boolean;
+  };
 }
 
 type EventOf<TType extends string, TPayload extends object = {}> = {

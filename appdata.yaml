@@ -1,6 +1,8 @@
 ---
 configFileContents: {}
 events: []
+uiState:
+  settingsOpen: false
 workingDirectory:
   files:
     - children:
@@ -26,4 +28,9 @@ workingDirectory:
           path: /Portal eRejestracja/appsettings.json
       name: Portal eRejestracja
       path: /Portal eRejestracja
+    - children:
+        - name: appsettings.json
+          path: /test-new/appsettings.json
+      name: test-new
+      path: /test-new
   path: "D:/workspace/tata-admin/test/examples/example-directory-1"

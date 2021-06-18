@@ -53,7 +53,10 @@
 </script>
 
 <article>
-  <details open class="bg-gray-200 rounded-md p-2">
+  <details
+    bind:open={$appStore.uiState.settingsOpen}
+    class="bg-gray-200 rounded-md p-2"
+  >
     <summary class="text-xs cursor-pointer mb-1"
       ><span class="text-sm">Ustawienia</span></summary
     >
