@@ -53,7 +53,8 @@
       "fs": {
         "readDir": true,
         "readTextFile": true,
-        "writeFile": true
+        "writeFile": true,
+        "createDir": true
       },
       "dialog": {
         "open": true

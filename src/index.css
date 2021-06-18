@@ -16,6 +16,12 @@ html {
 
 @layer components {
   .btn-primary {
-    @apply px-2 py-1 text-sm bg-indigo-700 text-white rounded-md;
+    @apply px-2 py-1 text-sm bg-indigo-700 text-white rounded-md font-semibold shadow-sm hover:bg-indigo-600 hover:shadow-md transform hover:scale-105;
+  }
+  .btn-secondary {
+    @apply px-2 py-1 text-sm bg-gray-200 text-gray-900 rounded-md font-semibold hover:bg-gray-100 hover:shadow-md transform hover:scale-105;
+  }
+  .btn-primary-lg {
+    @apply px-3 py-2 text-base bg-indigo-700 text-white rounded-md font-bold shadow-sm hover:bg-indigo-600 hover:shadow-md transform hover:scale-105;
   }
 }

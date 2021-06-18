@@ -1,13 +1,5 @@
-[x] Read appsettings.json files from a directory
-[x] List them in the app in a flat-ish manner
-[ ] Modify them with GUI form
-[ ] Read config files
+[ ] Modify config files with GUI form
 [ ] Retrieve missing files
-[ ] Show file content changes 
-
-Wants:
 
 1. Program pokazuje wszystkie pliki appsettings.json w katalogu.
 2. Program pokazuje plik appsettings.json w treeview wraz z ApplicationName, jeśli istnieje, wpp ConnectionString. 
-3. Pliki appsettings.json mogą zniknąć bądź zostać zmienione.
-4. Program przechowuje ostatni stan wszystkich plików appsettings.json

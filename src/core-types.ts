@@ -27,11 +27,22 @@ type EventOf<TType extends string, TPayload extends object = {}> = {
   date: Date | string;
 } & TPayload;
 
+export namespace AppEvent {
+  export type OfType<T extends AppEvent["type"]> = Extract<
+    AppEvent,
+    { type: T }
+  >;
+}
+
 export type AppEvent =
   | EventOf<"please-enter-working-directory">
   | EventOf<"error", { message: string }>
   | EventOf<"file-missing", { path: string }>
-  | EventOf<"new-file-added", { path: string }>;
+  | EventOf<"new-file-added", { path: string }>
+  | EventOf<
+      "file-content-conflict",
+      { path: string; oldContent: ConfigFile; newContent: ConfigFile }
+    >;
 
 export namespace ConfigFile {
   export namespace IpFilteringOption {

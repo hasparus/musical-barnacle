@@ -1,9 +1,8 @@
 <script lang="ts">
-import { text } from "svelte/internal";
-
   import { appStore } from "./core";
   import LabelSpan from "./LabelSpan.svelte";
   import { texts } from "./texts";
+  import Link from "./Link.svelte";
 
   $: events = $appStore.events;
 
@@ -24,7 +23,20 @@ import { text } from "svelte/internal";
               <strong>{texts.FileMissing}</strong>
               {event.path}
             </div>
-            <button class="btn-primary">{texts.RetrieveFile}</button>
+            <div>
+              <button
+                class="btn-secondary"
+                on:click={() => appStore.forgetFile(event)}
+              >
+                {texts.Forget}
+              </button>
+              <button
+                class="btn-primary"
+                on:click={() => appStore.retrieveFile(event)}
+              >
+                {texts.RetrieveFile}
+              </button>
+            </div>
           {:else if event.type === "new-file-added"}
             <div>
               <strong>{texts.NewFileAdded}</strong>
@@ -35,6 +47,17 @@ import { text } from "svelte/internal";
               on:click={() => appStore.addFileFromPath(event.path)}
               >{texts.TrackFile}</button
             >
+          {:else if event.type === "file-content-conflict"}
+            <div>
+              <strong>{texts.FileContentConflict}</strong>
+              {event.path}
+            </div>
+            <Link
+              class="btn-primary"
+              to={{ path: "/conflict-resolution", filePath: event.path }}
+            >
+              {texts.SolveConflict}
+            </Link>
           {:else if event.type === "please-enter-working-directory"}
             <strong>{texts.PleaseEnterWorkingDirectory}</strong>
           {/if}

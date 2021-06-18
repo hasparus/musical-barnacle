@@ -7,6 +7,10 @@ export type Route =
   | {
       path: "/editor";
       editedConfigFile: string;
+    }
+  | {
+      path: "/conflict-resolution";
+      filePath: string;
     };
 
 const { set, subscribe } = writable<Route>(

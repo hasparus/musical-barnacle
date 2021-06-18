@@ -1,5 +1,6 @@
 import { fs, tauri } from "@tauri-apps/api";
 import json5 from "json5";
+import { isEqual, isEqualWith } from "lodash";
 import { writable } from "svelte/store";
 import { assert } from "ts-essentials";
 
@@ -77,42 +78,94 @@ export const appStore = (() => {
 
               const date = new Date();
               update((s) => {
+                const newEvents = [
+                  ...missingPaths.map(
+                    (path): AppEvent => ({
+                      type: "file-missing",
+                      date,
+                      path,
+                    })
+                  ),
+                  ...addedPaths.map(
+                    (path): AppEvent => ({
+                      type: "new-file-added",
+                      date,
+                      path,
+                    })
+                  ),
+                ];
+
                 return {
                   ...s,
                   status: "reading-configs-contents",
                   events: [
-                    ...s.events,
-                    ...missingPaths.map(
-                      (path): AppEvent => ({
-                        type: "file-missing",
-                        date,
-                        path,
-                      })
+                    ...s.events.filter(
+                      (e) => !newEvents.some((ne) => isEqualBesidesDate(e, ne))
                     ),
-                    ...addedPaths.map(
-                      (path): AppEvent => ({
-                        type: "new-file-added",
-                        date,
-                        path,
-                      })
-                    ),
+                    ...newEvents,
                   ],
                 };
               });
             })
             .then(() => {
               update((s) => {
-                console.log("reading config files");
                 void readConfigFiles(s)
-                  .then(({ configFileContents, events }) => {
-                    update((s) => ({
-                      ...s,
-                      events: [...s.events, ...events],
-                      configFileContents: {
-                        ...s.configFileContents,
-                        ...configFileContents,
-                      },
-                    }));
+                  .then(({ errorEvents, fileContents }) => {
+                    update((s) => {
+                      const oldFileContents = s.configFileContents;
+
+                      const date = new Date();
+                      const conflicts = Object.keys(oldFileContents)
+                        .map(
+                          (
+                            path
+                          ): AppEvent.OfType<"file-content-conflict"> | null => {
+                            const oldContent = oldFileContents[path];
+                            const newContent = fileContents[path];
+
+                            if (
+                              isEqual(oldContent, newContent) ||
+                              !(oldContent && newContent)
+                            ) {
+                              return null;
+                            }
+
+                            return {
+                              type: "file-content-conflict",
+                              path,
+                              date,
+                              oldContent,
+                              newContent,
+                            };
+                          }
+                        )
+                        .filter(isDefined);
+
+                      const newState: ApplicationState = {
+                        ...s,
+                        status: "idle",
+                        events: [
+                          ...s.events.filter((e) => {
+                            return (
+                              e.type !== "file-content-conflict" ||
+                              !conflicts.find((c) =>
+                                // if the conflict is exactly the same, we can skip the old one
+                                isEqualBesidesDate(e, c)
+                              )
+                            );
+                          }),
+                          ...errorEvents,
+                          ...conflicts,
+                        ],
+                        configFileContents: {
+                          ...fileContents,
+                          ...oldFileContents,
+                        },
+                      };
+
+                      void writeAppState(newState);
+                      return newState;
+                    });
                   })
                   .catch((err) => {
                     update((s) =>
@@ -143,12 +196,6 @@ export const appStore = (() => {
 
         return s;
       });
-
-      // read new file contents
-
-      // compare old files and new
-
-      // push "file-changed" events
     },
     addFileFromPath: (path: string) => {
       update((s) => {
@@ -170,10 +217,115 @@ export const appStore = (() => {
         return s;
       });
     },
+    resolveConflict: (
+      conflict: AppEvent.OfType<"file-content-conflict">,
+      version: "oldContent" | "newContent"
+    ) => {
+      update((s) => {
+        s.events.splice(s.events.indexOf(conflict));
+
+        const { path, [version]: selectedContent } = conflict;
+
+        s.configFileContents[path] = selectedContent;
+
+        void writeConfigFile(s.workingDirectory!.path + path, selectedContent)
+          .then(() => {
+            void writeAppState(s);
+          })
+          .catch((err) => {
+            update((s) =>
+              pushError(s, "failed to write config file", err, {
+                path,
+                selectedContent,
+              })
+            );
+          });
+
+        return s;
+      });
+    },
+    ignoreEvent: (event: AppEvent) => {
+      update((s) => {
+        const index = s.events.indexOf(event);
+        s.events.splice(index);
+
+        void writeAppState(s);
+        return s;
+      });
+    },
+    forgetFile: (event: AppEvent.OfType<"file-missing">) => {
+      const { path } = event;
+      update((s) => {
+        const index = s.events.indexOf(event);
+        s.events.splice(index);
+
+        reduceFileTree<boolean>(
+          s.workingDirectory!.files,
+          false,
+          (removed, file, ancestors) => {
+            if (!removed && file.path === path) {
+              let current = file;
+              for (const ancestor of ancestors) {
+                assert(ancestor.children, "ancestor must be a directory");
+                ancestor.children.splice(ancestor.children.indexOf(current));
+
+                console.log("ancestor>>", ancestor);
+
+                if (ancestor.children.length > 0) {
+                  break;
+                }
+
+                current = ancestor;
+              }
+
+              return true;
+            }
+
+            return false;
+          },
+          [{ children: s.workingDirectory!.files, path: "/" }]
+        );
+
+        void writeAppState(s);
+        return s;
+      });
+    },
+    retrieveFile: (event: AppEvent.OfType<"file-missing">) => {
+      update((s) => {
+        const content = s.configFileContents[event.path];
+
+        if (!content) {
+          pushError(s, "failed to retrieve file", event.path);
+        } else {
+          void writeConfigFile(s.workingDirectory!.path + event.path, content)
+            .then(() => {
+              appStore.ignoreEvent(event);
+            })
+            .catch((err: unknown) => {
+              console.log("failed to write retrieved file", event.path, {
+                err,
+              });
+              update((s) =>
+                pushError(s, "failed to write retrieved file", event.path, {
+                  err,
+                })
+              );
+            });
+        }
+
+        return s;
+      });
+    },
   };
 })();
 
 export const CONFIG_FILE_REGEX = /appsettings.json/i;
+
+function isEqualBesidesDate(left: unknown, right: unknown): boolean {
+  return isEqualWith(left, right, (_v, _o, key) =>
+    key === "date" ? undefined : true
+  );
+}
 
 function preprocessFiles(entries: FileEntry[], rootPath: string): FileEntry[] {
   return entries
@@ -279,15 +431,16 @@ export async function writeAppState(state: ApplicationState) {
 function reduceFileTree<TAccum>(
   files: FileEntry[],
   initialAcc: TAccum,
-  f: (accumulator: TAccum, value: FileEntry) => TAccum
+  f: (accumulator: TAccum, value: FileEntry, ancestors: FileEntry[]) => TAccum,
+  ancestors: FileEntry[] = []
 ) {
   let acc: TAccum = initialAcc;
 
   for (const file of files) {
-    acc = f(acc, file);
+    acc = f(acc, file, ancestors);
     const { children } = file;
     if (children && children.length) {
-      acc = reduceFileTree(children, acc, f);
+      acc = reduceFileTree(children, acc, f, [file, ...ancestors]);
     }
   }
 
@@ -312,9 +465,10 @@ function getConfigFilesFromTree(files: FileEntry[]) {
   }).filter(isDefined);
 }
 
-export async function readConfigFiles(
-  state: ApplicationState
-): Promise<Pick<ApplicationState, "events" | "configFileContents">> {
+export async function readConfigFiles(state: ApplicationState): Promise<{
+  fileContents: ApplicationState["configFileContents"];
+  errorEvents: AppEvent[];
+}> {
   assert(
     state.workingDirectory,
     "workDir must be set when reading config files"
@@ -334,27 +488,38 @@ export async function readConfigFiles(
       try {
         text = await fs.readTextFile(absolutePath);
       } catch (err) {
-        throw new Error(`Failed to read ${file.path}: ${err as string}`);
+        if (typeof err === "string" && err.includes("The system cannot find")) {
+          console.info("file not found", file.path);
+          return null;
+        }
+
+        throw new Error(`Failed to read ${file.path}: ${err}`);
       }
 
       const parsed = json5.parse<ConfigFile>(text);
 
       console.info("file read", parsed);
 
-      return parsed;
+      return { path: file.path, parsed };
     })
   );
 
   const date = new Date();
-  const events: AppEvent[] = [];
-  const configFileContents: ApplicationState["configFileContents"] = {};
+  const errorEvents: AppEvent[] = [];
+  const fileContents: ApplicationState["configFileContents"] = {};
 
   for (const result of results) {
     switch (result.status) {
       case "fulfilled":
+        if (!result.value) {
+          continue;
+        }
+        const { parsed, path } = result.value;
+        fileContents[path] = parsed;
         break;
+
       case "rejected":
-        events.push({
+        errorEvents.push({
           type: "error",
           date,
           message:
@@ -367,8 +532,8 @@ export async function readConfigFiles(
   }
 
   return {
-    events,
-    configFileContents,
+    errorEvents,
+    fileContents,
   };
 }
 
@@ -426,4 +591,20 @@ function mergeFileEntries(xs: FileEntry[], ys: FileEntry[]) {
   }
 
   return res;
+}
+
+async function writeConfigFile(absolutePath: string, content: ConfigFile) {
+  const serialized = JSON.stringify(content, null, 2);
+
+  const dirname = absolutePath.slice(0, absolutePath.lastIndexOf("/"));
+  try {
+    await fs.createDir(dirname, { recursive: true });
+  } catch (err) {
+    console.error("Failed to create directory", { dirname }, err);
+  }
+
+  await fs.writeFile({
+    path: absolutePath,
+    contents: serialized,
+  });
 }

@@ -10,6 +10,7 @@
 
   import { texts } from "./texts";
   import { onMount } from "svelte";
+  import ConflictResolutionScreen from "./ConflictResolutionScreen.svelte";
 
   onMount(() => {
     void appStore.init();
@@ -29,15 +30,20 @@
     <ConfigFilesTreeview
       children={$appStore.workingDirectory?.files || []}
       on:click={(event) => {
-        console.log("App > ConfigFilesTreeview $ click", event.detail);
-
         navigate({ path: "/editor", editedConfigFile: event.detail.path });
       }}
     />
     <AppEventsLog />
   {:else if $route.path === "/editor"}
-    <Link to="/" class="text-sm p-2 -m-2">← {texts.GoBack}</Link>
-    <ConfigFileEditor />
+    <section class="relative space-y-5">
+      <Link to="/" class="text-sm p-2 -m-2">← {texts.GoBack}</Link>
+      <ConfigFileEditor />
+    </section>
+  {:else if $route.path === "/conflict-resolution"}
+    <section class="relative space-y-5">
+      <Link to="/" class="text-sm p-2 -m-2">← {texts.GoBack}</Link>
+      <ConflictResolutionScreen path={$route.filePath} />
+    </section>
   {/if}
 
   <div class="flex-1" />
