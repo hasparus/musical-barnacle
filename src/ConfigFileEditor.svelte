@@ -24,21 +24,23 @@
     name="ApplicationName"
     placeholder="/mMedica.mMDAB"
   />
-  <div class="flex flex-row gap-2">
-    <p>
+  <div class="flex flex-col p-2 bg-gray-200 rounded-md space-y-2">
+    <p class="text-sm">
       Pula portów na których mogą zostać wystawione aplikacje modułów jeżeli
       URLe nie są zdefiniowane lokalnie
     </p>
-    <Input
-      label={texts.ModulesPortStartIndex}
-      type="number"
-      name="ModulesPortStartIndex"
-    />
-    <Input
-      label={texts.ModulesPortEndIndex}
-      type="number"
-      name="ModulesPortEndIndex"
-    />
+    <div class="grid grid-cols-2 gap-2">
+      <Input
+        label={texts.ModulesPortStartIndex}
+        type="number"
+        name="ModulesPortStartIndex"
+      />
+      <Input
+        label={texts.ModulesPortEndIndex}
+        type="number"
+        name="ModulesPortEndIndex"
+      />
+    </div>
   </div>
   <Input label={texts.DiagnosticMode} name="DiagnosticMode" />
   <IpFilteringOptionSelect />
