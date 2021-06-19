@@ -40,11 +40,9 @@
     { leading: true, trailing: true }
   );
 
-  const inputEnabled = $appStore.status === "idle" || !$appStore.status;
 
   $: {
     if (
-      inputEnabled &&
       workDirInputValue &&
       $appStore.workingDirectory?.path !== workDirInputValue
     ) {
@@ -67,7 +65,6 @@
       label={texts.WorkingDirectory}
       placeholder="D:/workspace/apps"
       type="text"
-      disabled={!inputEnabled}
       status={workDirInputValue ? workDirStatus : undefined}
     />
     <div class="error" hidden={workDirStatus !== "error"}>
