@@ -75,6 +75,7 @@ export interface ConfigFile extends ConfigFile.IpFilteringOption {
   ModulesPortStartIndex?: string;
   ProxyIPs: string;
   ProxyWindowsEnable: boolean;
+  DiagnosticMode?: boolean;
 }
 
 export type AbsolutePath = string;

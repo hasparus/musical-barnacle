@@ -37,7 +37,7 @@
   {:else if $route.path === "/editor"}
     <section class="relative space-y-5">
       <Link to="/" class="text-sm p-2 -m-2">← {texts.GoBack}</Link>
-      <ConfigFileEditor />
+      <ConfigFileEditor relativePath={$route.editedConfigFile} />
     </section>
   {:else if $route.path === "/conflict-resolution"}
     <section class="relative space-y-5">

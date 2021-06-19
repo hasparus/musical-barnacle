@@ -302,7 +302,7 @@ export const appStore = (() => {
               appStore.ignoreEvent(event);
             })
             .catch((err: unknown) => {
-              console.log("failed to write retrieved file", event.path, {
+              console.error("failed to write retrieved file", event.path, {
                 err,
               });
               update((s) =>
@@ -312,6 +312,24 @@ export const appStore = (() => {
               );
             });
         }
+
+        return s;
+      });
+    },
+    saveConfigFile: (relativePath: string, value: ConfigFile) => {
+      console.info("saving config file", { relativePath, value });
+      update((s) => {
+        s.configFileContents[relativePath] = value;
+
+        const absolutePath = s.workingDirectory!.path + relativePath;
+        void writeConfigFile(absolutePath, value)
+          .then(() => {
+            console.info("written config file", { relativePath, value });
+          })
+          .catch((err) => {
+            console.error("Failed to save config file", err);
+            update((s) => pushError(s, "Failed to save config file", err));
+          });
 
         return s;
       });
@@ -410,11 +428,11 @@ async function invokeCommand(
   }
 }
 
-export async function readAppState(): Promise<ApplicationState> {
+async function readAppState(): Promise<ApplicationState> {
   return (await invokeCommand("read_app_state")) as ApplicationState;
 }
 
-export async function writeAppState(state: ApplicationState) {
+async function writeAppState(state: ApplicationState) {
   delete state.status;
 
   const res = await invokeCommand("write_app_state", { state });
