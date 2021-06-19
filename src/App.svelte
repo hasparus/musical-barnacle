@@ -20,7 +20,7 @@
 
 <main class="p-10 space-y-3 min-h-screen flex flex-col max-w-3xl">
   {#if $route.path === "/"}
-    <header class="max-w-md space-y-1">
+    <header class="max-w-xl space-y-1">
       <AppConfiguration />
     </header>
 

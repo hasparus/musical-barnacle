@@ -77,7 +77,7 @@
       label={texts.ProxyWindowsEnable}
       type="checkbox"
       name="ProxyWindowsEnable"
-      bind:value={values.ProxyWindowsEnable}
+      bind:checked={values.ProxyWindowsEnable}
     />
     <Input
       label={texts.ProxyIPs}

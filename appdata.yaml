@@ -16,7 +16,7 @@ configFileContents:
       AllowShowPortalInIFrameOnlyFromURL: ""
       AllowShowPortalInIframe: false
   /mMDAB/appsettings.json:
-    ApplicationName: ""
+    ApplicationName: /myMedica
     ApplicationUrl: "http://localhost:5001"
     ConnectionString: "Server=localhost,5432;Database=MMEDICA;"
     DiagnosticMode: true
@@ -44,12 +44,59 @@ configFileContents:
     ProxyIPs: ""
     ProxyWindowsEnable: false
     SetOfIpAddresses: 127.0.0.2;10.1.2.3-10.5.1.3
-  /test-new/appsettings.json:
-    value: dupa
-    wow: wowow
+  example-directory-1/Portal eRejestracja/appsettings.json:
+    ApplicationName: ""
+    ApplicationUrl: "http://localhost:4999"
+    ConnectionString: "Server=localhost,5432;Database=ERMMEDICA;"
+    IpFilteringOptionPortal: 0
+    IpFilteringOptioneRWS: 0
+    ModulesPortEndIndex: ""
+    ModulesPortStartIndex: ""
+    ProxyIPs: ""
+    ProxyWindowsEnable: false
+    SetOfIpAddresses: ""
+    SetOfIpAddressesPortal: 192.168.137.2;10.1.2.3-10.5.1.3
+    SetOfIpAddresseseRWS: 192.168.137.2;10.1.2.1-10.5.1.1
+    ShowOfflinePageNow: false
+    ShowOfflinePageWhenERDBIsOffline: false
+    XFrameOptions:
+      AllowShowPortalInIFrameOnlyFromURL: ""
+      AllowShowPortalInIframe: false
+  example-directory-1/mMDAB/appsettings.json:
+    ApplicationName: /myMedica
+    ApplicationUrl: "http://localhost:5001"
+    ConnectionString: "Server=localhost,5432;Database=MMEDICA;"
+    DiagnosticMode: true
+    IpFilteringOption: 0
+    ModulesPortEndIndex: "5500"
+    ModulesPortStartIndex: "5002"
+    ProxyIPs: ""
+    ProxyWindowsEnable: false
+    SetOfIpAddresses: 127.0.0.2;10.1.2.3-10.5.1.3
+  example-directory-1/mMWS/appsettings.json:
+    ApplicationName: ""
+    ApplicationUrl: ""
+    ConnectionString: ""
+    HostAsStandalone: false
+    IpFilteringOption: 0
+    ModulesPortEndIndex: ""
+    ModulesPortStartIndex: ""
+    ProxyIPs: ""
+    SetOfIpAddresses: 127.0.0.2;10.1.2.3-10.5.1.3
+  example-directory-1/nested-dir/nested-dir/appsettings.json:
+    ApplicationName: ""
+    ApplicationUrl: "http://localhost:5001"
+    ConnectionString: "Server=localhost,5432;Database=MMEDICA;"
+    DiagnosticMode: true
+    IpFilteringOption: 0
+    ModulesPortEndIndex: "5500"
+    ModulesPortStartIndex: "5002"
+    ProxyIPs: ""
+    ProxyWindowsEnable: false
+    SetOfIpAddresses: 127.0.0.2;10.1.2.3-10.5.1.3
 events: []
 uiState:
-  settingsOpen: false
+  settingsOpen: true
 workingDirectory:
   files:
     - children:

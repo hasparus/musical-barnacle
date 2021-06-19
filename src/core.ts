@@ -49,7 +49,10 @@ export const appStore = (() => {
       try {
         const appState = await readAppState();
 
-        appState.status = "gathering-missing-files";
+        appState.status = appState.workingDirectory?.path
+          ? "gathering-missing-files"
+          : "idle";
+
         set(appState);
 
         // gather added files and missing files
@@ -192,7 +195,30 @@ export const appStore = (() => {
           files,
         };
 
-        void writeAppState(s);
+        if (files.length) {
+          void readConfigFiles(s)
+            .then(({ errorEvents, fileContents }) => {
+              update((s) => {
+                const oldFileContents = s.configFileContents;
+
+                const newState: ApplicationState = {
+                  ...s,
+                  status: "idle",
+                  events: [...s.events, ...errorEvents],
+                  configFileContents: {
+                    ...fileContents,
+                    ...oldFileContents,
+                  },
+                };
+
+                void writeAppState(newState);
+                return newState;
+              });
+            })
+            .catch((err) => {
+              update((s) => pushError(s, "Failed to read config files", err));
+            });
+        }
 
         return s;
       });
